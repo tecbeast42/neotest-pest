@@ -168,6 +168,16 @@ end
 function NeotestAdapter.results(test, result, tree)
     local output_file = test.context.results_path
 
+    -- Build set of discovered IDs from tree for fallback matching
+    local discovered_ids = {}
+    for _, node in tree:iter() do
+        local data = node:data()
+        if data.id then
+            discovered_ids[data.id] = true
+            debug("Discovered ID:", { data.id })
+        end
+    end
+
     local ok, data = pcall(lib.files.read, output_file)
     if not ok then
         error("No test output file found! Should have been at: " .. output_file)
@@ -182,7 +192,8 @@ function NeotestAdapter.results(test, result, tree)
         return {}
     end
 
-    local ok, results = pcall(utils.get_test_results, parsed_data, output_file)
+    -- Pass discovered_ids for fallback matching when IDs don't match exactly
+    local ok, results = pcall(utils.get_test_results, parsed_data, output_file, discovered_ids)
     if not ok then
         error("Could not get test results!")
         logger.error("Could not get test results", output_file)

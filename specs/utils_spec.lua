@@ -267,7 +267,7 @@ describe("get_test_results", function()
 
         local expected = {
             ["tests/Feature/UserTest.php::is false"] = {
-                errors = { { message = message } },
+                errors = { { message = message, line = 38 } }, -- 0-indexed from tests/Feature/UserTest.php:39
                 output_file = output_file,
                 status = "failed",
                 short = "FAILED | is false\n\n" .. message
@@ -331,7 +331,7 @@ describe("get_test_results", function()
 
         local expected = {
             ["tests/Feature/UserTest.php::tellName"] = {
-                errors = { { message = message } },
+                errors = { { message = message, line = 23 } }, -- 0-indexed from tests/Feature/UserTest.php:24
                 output_file = output_file,
                 status = "failed",
                 short = "ERROR | tellName\n\n" .. message
@@ -393,6 +393,139 @@ describe("get_test_results", function()
         }
 
         assert.are.same(utils.get_test_results(xml_output, output_file), expected)
+    end)
+end)
+
+describe("normalize_test_name", function()
+    it("handles simple names", function()
+        assert.are.equal("example", utils.normalize_test_name("example"))
+    end)
+
+    it("removes 'it ' prefix", function()
+        assert.are.equal("is true", utils.normalize_test_name("it is true"))
+    end)
+
+    it("removes arrow context with ->", function()
+        assert.are.equal("update", utils.normalize_test_name("update -> rejects update that would overlap"))
+    end)
+
+    it("removes unicode arrow context", function()
+        assert.are.equal("update", utils.normalize_test_name("update → rejects overlapping"))
+    end)
+
+    it("removes dataset parameters with single quotes", function()
+        assert.are.equal("validates email", utils.normalize_test_name("validates email with 'test@example.com'"))
+    end)
+
+    it("removes dataset parameters with double quotes", function()
+        assert.are.equal("validates email", utils.normalize_test_name('validates email with "test@example.com"'))
+    end)
+
+    it("handles complex describe + it pattern", function()
+        assert.are.equal("performs sum", utils.normalize_test_name("it performs sum -> with positive numbers"))
+    end)
+
+    it("trims trailing whitespace", function()
+        assert.are.equal("test name", utils.normalize_test_name("test name   "))
+    end)
+end)
+
+describe("generate_id_variants", function()
+    it("generates normalized variant", function()
+        local variants = utils.generate_id_variants(
+            "tests/Feature/UserTest.php",
+            "update -> rejects update that would overlap"
+        )
+        assert.is_true(vim.tbl_contains(variants, "tests/Feature/UserTest.php::update"))
+    end)
+
+    it("generates variant for it prefix", function()
+        local variants = utils.generate_id_variants(
+            "tests/Feature/UserTest.php",
+            "it is true"
+        )
+        assert.is_true(vim.tbl_contains(variants, "tests/Feature/UserTest.php::is true"))
+    end)
+end)
+
+describe("extract_error_line", function()
+    it("extracts line from direct file:line reference", function()
+        local message = "tests/Feature/UserTest.php::it is false\nFailed asserting that true is false.\n\ntests/Feature/UserTest.php:39"
+        local line = utils.extract_error_line(message, "tests/Feature/UserTest.php")
+        assert.are.equal(38, line) -- 0-indexed
+    end)
+
+    it("returns nil when no line found", function()
+        local message = "Some error without line numbers"
+        local line = utils.extract_error_line(message, "tests/Feature/UserTest.php")
+        assert.is_nil(line)
+    end)
+
+    it("handles nil message gracefully", function()
+        local line = utils.extract_error_line(nil, "tests/Feature/UserTest.php")
+        assert.is_nil(line)
+    end)
+end)
+
+describe("get_test_results with Pest v4 naming", function()
+    local output_file = "/tmp/test-results"
+
+    it("matches describe block tests via normalization", function()
+        local xml_output = {
+            testsuites = {
+                testsuite = {
+                    testsuite = {
+                        _attr = {
+                            file = "tests/Feature/UserTest.php",
+                            name = "P\\Tests\\Feature\\UserTest"
+                        },
+                        testcase = {
+                            _attr = {
+                                file = "tests/Feature/UserTest.php",
+                                name = "update -> rejects update that would overlap with other entry"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        local results = utils.get_test_results(xml_output, output_file)
+        -- Should create ID with normalized name
+        assert.is_not_nil(results["tests/Feature/UserTest.php::update"])
+        assert.are.equal("passed", results["tests/Feature/UserTest.php::update"].status)
+    end)
+
+    it("includes line numbers in error results", function()
+        local xml_output = {
+            testsuites = {
+                testsuite = {
+                    testsuite = {
+                        _attr = {
+                            file = "tests/Feature/UserTest.php",
+                            name = "P\\Tests\\Feature\\UserTest"
+                        },
+                        testcase = {
+                            _attr = {
+                                file = "tests/Feature/UserTest.php",
+                                name = "is false"
+                            },
+                            failure = {
+                                "tests/Feature/UserTest.php::it is false\nFailed asserting that true is false.\n\ntests/Feature/UserTest.php:39",
+                                _attr = { type = "PHPUnit\\Framework\\ExpectationFailedException" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        local results = utils.get_test_results(xml_output, output_file)
+        local result = results["tests/Feature/UserTest.php::is false"]
+        assert.is_not_nil(result)
+        assert.are.equal("failed", result.status)
+        assert.is_not_nil(result.errors)
+        assert.are.equal(38, result.errors[1].line) -- 0-indexed
     end)
 end)
 -- vim: fdm=indent fdl=2
