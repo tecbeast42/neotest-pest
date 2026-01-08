@@ -2,27 +2,62 @@
 
 This plugin provides a [Pest](https://pestphp.com) adapter for the [Neotest](https://github.com/nvim-neotest/neotest) framework.
 
-This is a fork of `neotest-pest` originally by [@theutz](https://github.com/theutz/neotest-pest), with some fixes and updates:
+This is a fork of [V13Axel/neotest-pest](https://github.com/V13Axel/neotest-pest) with Pest v4 support and additional features:
 
-- Updated to work with [Pest](https://pestphp.com) 2.0
-- Support for (and automatic detection of) Laravel Sail
-  - Note: This also moves junit output files into `storage/app/`
-- Parallel testing support
+## What's New
 
-:warning: _Ive only focused on making this work for me. Please test against your Pest tests_ :warning:
+### Pest v4 Support
 
-## :package: Installation
+- **Describe blocks** - Full support for `describe()` with both `it()` and `test()` functions
+- **Arch testing** - Detection of `arch()->preset()->...` chains (security, laravel, php, etc.)
+- **Test name normalization** - Properly matches JUnit XML output to discovered tests
+
+### Improved Diagnostics
+
+- **Inline error display** - Error line numbers are extracted from stack traces and displayed at the correct location
+- **Fallback ID matching** - When primary test ID doesn't match, tries normalized variants
+
+### Supported Test Patterns
+
+```php
+// Basic tests
+test('example test', function () { ... });
+it('does something', function () { ... });
+
+// Describe blocks with it()
+describe('feature', function () {
+    it('works correctly', function () { ... });
+});
+
+// Describe blocks with test()
+describe('cancel', function () {
+    test('guests cannot cancel', function () { ... });
+});
+
+// Arch preset tests
+arch()->preset()->security();
+arch()->preset()->laravel();
+arch()->preset()->php();
+
+// Arch with string argument
+arch('app namespace')->expect('App')->toBeClasses();
+
+// Pending tests
+todo('implement this later');
+```
+
+## Installation
 
 Install the plugin using your favorite package manager.
 
-Here's an example using lazy.nvim:
+### lazy.nvim
 
 ```lua
 {
     'nvim-neotest/neotest',
     dependencies = {
         ...,
-        'V13Axel/neotest-pest',
+        'tecbeast42/neotest-pest',
     },
     config = function()
         require('neotest').setup({
@@ -35,7 +70,28 @@ Here's an example using lazy.nvim:
 }
 ```
 
-## :wrench: Configuration
+### NixOS / nixvim
+
+```nix
+# Custom neotest-pest with Pest v4 support
+neotest-pest-v4 = pkgs.vimUtils.buildVimPlugin {
+  pname = "neotest-pest";
+  version = "unstable";
+  src = pkgs.fetchFromGitHub {
+    owner = "tecbeast42";
+    repo = "neotest-pest";
+    rev = "main";
+    hash = "sha256-..."; # Use nix flake prefetch to get hash
+  };
+  dependencies = with pkgs.vimPlugins; [
+    neotest
+    nvim-nio
+    plenary-nvim
+  ];
+};
+```
+
+## Configuration
 
 > [!TIP]
 > Any of these options can be set to a lua function that returns the desired result. For example, wanna run tests in parallel, one for each CPU core?
@@ -95,13 +151,11 @@ adapters = {
 }
 ```
 
-## :rocket: Usage
+## Usage
 
 #### Test single method
 
 To test a single test, hover over the test and run `lua require('neotest').run.run()`.
-
-As an example, I have mine setup with <leader>t(est)n(earest) as such:
 
 ```lua
 vim.keymap.set('n', '<leader>tn', function() require('neotest').run.run() end)
@@ -110,8 +164,6 @@ vim.keymap.set('n', '<leader>tn', function() require('neotest').run.run() end)
 #### Test file
 
 To test a file run `lua require('neotest').run.run(vim.fn.expand('%'))`
-
-Example - <leader>t(est)f(ile):
 
 ```lua
 vim.keymap.set('n', '<leader>tf', function() require('neotest').run.run(vim.fn.expand('%')) end)
@@ -125,9 +177,9 @@ To test a directory run `lua require('neotest').run.run("path/to/directory")`
 
 To test the full test suite run `lua require('neotest').run.run({ suite = true })`
 
-## :gift: Contributing
+## Contributing
 
-I'm just one guy, maintaining this in my spare time and when I can get to it. Please raise a PR if you are interested in adding new functionality or fixing any bugs. When submitting a bug, please include an example test that I can test against.
+Please raise a PR if you are interested in adding new functionality or fixing any bugs. When submitting a bug, please include an example test that I can test against.
 
 To trigger the tests for the adapter, run:
 
@@ -135,6 +187,8 @@ To trigger the tests for the adapter, run:
 ./scripts/test
 ```
 
-## :clap: Prior Art
+## Prior Art
 
-This package is a fork of [neotest-pest](https://github.com/theutz/neotest-pest) by [@theutz](https://github.com/olimorris), which relied _heavily_ on [olimorris/neotest-phpunit](https://github.com/olimorris/neotest-phpunit) by [@olimorris](https://github.com/olimorris).
+This package is a fork of [V13Axel/neotest-pest](https://github.com/V13Axel/neotest-pest), which was forked from [theutz/neotest-pest](https://github.com/theutz/neotest-pest), which relied heavily on [olimorris/neotest-phpunit](https://github.com/olimorris/neotest-phpunit).
+
+The Pest v4 treesitter query fix was adapted from [mmillis1/neotest-pest](https://github.com/mmillis1/neotest-pest).
