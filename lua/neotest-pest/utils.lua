@@ -13,17 +13,28 @@ local function normalize_test_name(name)
     -- Step 1: Remove "it " prefix (Pest's it() function)
     normalized = string.gsub(normalized, "^it (.*)", "%1")
 
-    -- Step 2: Remove describe block context (arrow patterns)
-    -- Handles: "describe -> test" and "describe → test" (unicode arrow)
-    normalized = string.gsub(normalized, " [%-]+> .*$", "")
-    normalized = string.gsub(normalized, " → .*$", "")
+    -- Step 2: Handle arch preset tests specially
+    -- "preset → security" → "security"
+    -- "preset → laravel → ignoring..." → "laravel"
+    if string.match(normalized, "^preset [→%-]+> ") then
+        -- Extract the method after "preset → "
+        local after_preset = string.gsub(normalized, "^preset [→%-]+> ", "")
+        -- Get just the first method (before any subsequent arrows)
+        normalized = string.gsub(after_preset, " [→%-]+> .*$", "")
+        normalized = string.gsub(normalized, " → .*$", "")
+    else
+        -- Step 3: Remove describe block context (arrow patterns) for non-arch tests
+        -- Handles: "describe -> test" and "describe → test" (unicode arrow)
+        normalized = string.gsub(normalized, " [%-]+> .*$", "")
+        normalized = string.gsub(normalized, " → .*$", "")
+    end
 
-    -- Step 3: Remove dataset parameters
+    -- Step 4: Remove dataset parameters
     -- Handles: "test with 'value'" and "test with \"value\""
     normalized = string.gsub(normalized, " with '.-'$", "")
     normalized = string.gsub(normalized, ' with ".-"$', "")
 
-    -- Step 4: Trim trailing whitespace
+    -- Step 5: Trim trailing whitespace
     normalized = string.gsub(normalized, "%s+$", "")
 
     return normalized

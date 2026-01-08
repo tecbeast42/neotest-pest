@@ -92,6 +92,90 @@ function NeotestAdapter.discover_positions(path)
             arguments: (arguments (argument (array_creation_expression) @test.parameters))
         ) @test.with_parameters
 
+        ; Arch preset tests - 3 levels: arch()->preset()->X()
+        (expression_statement
+            (member_call_expression
+                object: (member_call_expression
+                    object: (function_call_expression
+                        function: (name) @_arch (#eq? @_arch "arch")
+                    )
+                    name: (name) @_preset (#eq? @_preset "preset")
+                )
+                name: (name) @test.name
+            )
+        ) @test.definition
+
+        ; Arch preset tests - 4 levels: arch()->preset()->X()->Y()
+        (expression_statement
+            (member_call_expression
+                object: (member_call_expression
+                    object: (member_call_expression
+                        object: (function_call_expression
+                            function: (name) @_arch2 (#eq? @_arch2 "arch")
+                        )
+                        name: (name) @_preset2 (#eq? @_preset2 "preset")
+                    )
+                    name: (name) @test.name
+                )
+            )
+        ) @test.definition
+
+        ; Arch preset tests - 5 levels: arch()->preset()->X()->Y()->Z()
+        (expression_statement
+            (member_call_expression
+                object: (member_call_expression
+                    object: (member_call_expression
+                        object: (member_call_expression
+                            object: (function_call_expression
+                                function: (name) @_arch3 (#eq? @_arch3 "arch")
+                            )
+                            name: (name) @_preset3 (#eq? @_preset3 "preset")
+                        )
+                        name: (name) @test.name
+                    )
+                )
+            )
+        ) @test.definition
+
+        ; Arch preset tests - 6 levels
+        (expression_statement
+            (member_call_expression
+                object: (member_call_expression
+                    object: (member_call_expression
+                        object: (member_call_expression
+                            object: (member_call_expression
+                                object: (function_call_expression
+                                    function: (name) @_arch4 (#eq? @_arch4 "arch")
+                                )
+                                name: (name) @_preset4 (#eq? @_preset4 "preset")
+                            )
+                            name: (name) @test.name
+                        )
+                    )
+                )
+            )
+        ) @test.definition
+
+        ; Arch preset tests - 7 levels (for chains with 4 chained methods after preset)
+        (expression_statement
+            (member_call_expression
+                object: (member_call_expression
+                    object: (member_call_expression
+                        object: (member_call_expression
+                            object: (member_call_expression
+                                object: (member_call_expression
+                                    object: (function_call_expression
+                                        function: (name) @_arch5 (#eq? @_arch5 "arch")
+                                    )
+                                    name: (name) @_preset5 (#eq? @_preset5 "preset")
+                                )
+                                name: (name) @test.name
+                            )
+                        )
+                    )
+                )
+            )
+        ) @test.definition
     ]]
 
     return lib.treesitter.parse_positions(path, query, {
