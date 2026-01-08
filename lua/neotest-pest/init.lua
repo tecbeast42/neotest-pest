@@ -92,43 +92,6 @@ function NeotestAdapter.discover_positions(path)
             arguments: (arguments (argument (array_creation_expression) @test.parameters))
         ) @test.with_parameters
 
-        ; Arch tests with preset() chaining: arch()->preset()->security()
-        (expression_statement
-            (member_call_expression
-                object: (member_call_expression
-                    object: (function_call_expression
-                        function: (name) @_arch (#eq? @_arch "arch")
-                    )
-                    name: (name) @_preset (#eq? @_preset "preset")
-                )
-                name: (name) @test.name
-            )
-        ) @test.definition
-
-        ; Arch tests with deeper chaining: arch()->preset()->laravel()->ignoring()
-        (expression_statement
-            (member_call_expression
-                object: (member_call_expression
-                    object: (member_call_expression
-                        object: (function_call_expression
-                            function: (name) @_arch2 (#eq? @_arch2 "arch")
-                        )
-                        name: (name) @_preset2 (#eq? @_preset2 "preset")
-                    )
-                )
-                name: (name) @test.name
-            )
-        ) @test.definition
-
-        ; Direct arch() with method: arch()->expect()
-        (expression_statement
-            (member_call_expression
-                object: (function_call_expression
-                    function: (name) @_arch3 (#eq? @_arch3 "arch")
-                )
-                name: (name) @test.name
-            )
-        ) @test.definition
     ]]
 
     return lib.treesitter.parse_positions(path, query, {
