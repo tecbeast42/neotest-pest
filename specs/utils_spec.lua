@@ -428,6 +428,21 @@ describe("normalize_test_name", function()
     it("trims trailing whitespace", function()
         assert.are.equal("test name", utils.normalize_test_name("test name   "))
     end)
+
+    it("extracts test name from describe → it pattern", function()
+        -- Pest v4 describe blocks with it() produce: `describe` → it test_name
+        assert.are.equal(
+            "activates a pending mandate subscription",
+            utils.normalize_test_name("`admin.subscriptions.activate` → it activates a pending mandate subscription")
+        )
+    end)
+
+    it("extracts test name from describe -> it pattern with ASCII arrow", function()
+        assert.are.equal(
+            "does something",
+            utils.normalize_test_name("`my.describe` -> it does something")
+        )
+    end)
 end)
 
 describe("generate_id_variants", function()

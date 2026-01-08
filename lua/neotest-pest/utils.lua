@@ -13,17 +13,27 @@ local function normalize_test_name(name)
     -- Step 1: Remove "it " prefix (Pest's it() function)
     normalized = string.gsub(normalized, "^it (.*)", "%1")
 
-    -- Step 2: Handle arch preset tests specially
+    -- Step 2: Handle describe blocks with it() functions
+    -- "`describe` → it test name" → "test name"
+    -- Pattern: anything → it <test_name>
+    local describe_it_match = string.match(normalized, " → it (.+)$")
+    if not describe_it_match then
+        describe_it_match = string.match(normalized, " %-> it (.+)$")
+    end
+
+    if describe_it_match then
+        normalized = describe_it_match
+    -- Step 3: Handle arch preset tests specially
     -- "preset → security" → "security"
     -- "preset → laravel → ignoring..." → "laravel"
-    if string.match(normalized, "^preset [→%-]+> ") then
+    elseif string.match(normalized, "^preset [→%-]+> ") then
         -- Extract the method after "preset → "
         local after_preset = string.gsub(normalized, "^preset [→%-]+> ", "")
         -- Get just the first method (before any subsequent arrows)
         normalized = string.gsub(after_preset, " [→%-]+> .*$", "")
         normalized = string.gsub(normalized, " → .*$", "")
     else
-        -- Step 3: Remove describe block context (arrow patterns) for non-arch tests
+        -- Step 4: Remove describe block context (arrow patterns) for non-arch tests
         -- Handles: "describe -> test" and "describe → test" (unicode arrow)
         normalized = string.gsub(normalized, " [%-]+> .*$", "")
         normalized = string.gsub(normalized, " → .*$", "")
