@@ -168,9 +168,9 @@ function NeotestAdapter.results(test, result, tree)
 
     -- Build set of discovered IDs from tree for fallback matching
     local discovered_ids = {}
-    for _, node in tree:iter() do
-        local data = node:data()
-        if data.id then
+    for _, pos in tree:iter_nodes() do
+        local data = pos:data()
+        if data and data.id then
             discovered_ids[data.id] = true
             debug("Discovered ID:", { data.id })
         end
