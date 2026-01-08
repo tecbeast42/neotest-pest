@@ -528,4 +528,105 @@ describe("get_test_results with Pest v4 naming", function()
         assert.are.equal(38, result.errors[1].line) -- 0-indexed
     end)
 end)
+
+describe("arch test result parsing", function()
+    local output_file = "/tmp/test-arch-results"
+
+    it("parses arch preset test results with arrow naming", function()
+        -- Pest outputs arch()->preset()->security() as "preset → security"
+        local xml_output = {
+            testsuites = {
+                testsuite = {
+                    testsuite = {
+                        _attr = {
+                            file = "tests/Feature/ArchTest.php",
+                            name = "P\\Tests\\Feature\\ArchTest"
+                        },
+                        testcase = {
+                            _attr = {
+                                file = "tests/Feature/ArchTest.php::preset → security",
+                                name = "preset → security"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        local results = utils.get_test_results(xml_output, output_file)
+        -- The normalized name should strip the arrow context
+        assert.is_not_nil(results["tests/Feature/ArchTest.php::preset"])
+        assert.are.equal("passed", results["tests/Feature/ArchTest.php::preset"].status)
+    end)
+
+    it("parses arch preset test with multiple chained methods", function()
+        -- Pest outputs arch()->preset()->laravel()->ignoring() chains
+        local xml_output = {
+            testsuites = {
+                testsuite = {
+                    testsuite = {
+                        _attr = {
+                            file = "tests/Feature/ArchTest.php",
+                            name = "P\\Tests\\Feature\\ArchTest"
+                        },
+                        testcase = {
+                            _attr = {
+                                file = "tests/Feature/ArchTest.php::preset → laravel → ignoring 'App\\Models\\Model'",
+                                name = "preset → laravel → ignoring 'App\\Models\\Model'"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        local results = utils.get_test_results(xml_output, output_file)
+        -- The normalized name should strip everything after first arrow
+        assert.is_not_nil(results["tests/Feature/ArchTest.php::preset"])
+        assert.are.equal("passed", results["tests/Feature/ArchTest.php::preset"].status)
+    end)
+
+    it("parses failed arch test with error details", function()
+        local xml_output = {
+            testsuites = {
+                testsuite = {
+                    testsuite = {
+                        _attr = {
+                            file = "tests/Feature/ArchTest.php",
+                            name = "P\\Tests\\Feature\\ArchTest"
+                        },
+                        testcase = {
+                            _attr = {
+                                file = "tests/Feature/ArchTest.php::preset → laravel",
+                                name = "preset → laravel"
+                            },
+                            failure = {
+                                "Expecting 'app/Http/Controllers/MyController.php' not to have public methods...\n\napp/Http/Controllers/MyController.php:42",
+                                _attr = { type = "Pest\\Arch\\Exceptions\\ArchExpectationFailedException" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        local results = utils.get_test_results(xml_output, output_file)
+        local result = results["tests/Feature/ArchTest.php::preset"]
+        assert.is_not_nil(result)
+        assert.are.equal("failed", result.status)
+        assert.is_not_nil(result.errors)
+        assert.is_not_nil(result.errors[1].message)
+    end)
+end)
+
+-- NOTE: Treesitter discovery limitations
+-- The following arch() patterns are NOT detected by treesitter discovery:
+--   arch()->preset()->security()
+--   arch()->preset()->laravel()->ignoring(...)
+--   arch()->expect('App\\Models')->...
+--
+-- Only arch('description', function() {...}) with a string argument is detected.
+-- This is a known limitation because treesitter cannot match arbitrary-depth
+-- method chains. These tests will run when executing the whole file but won't
+-- appear individually in the neotest summary.
 -- vim: fdm=indent fdl=2
