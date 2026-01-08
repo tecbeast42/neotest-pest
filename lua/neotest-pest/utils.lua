@@ -162,8 +162,15 @@ local function make_outputs(test, output_file)
     -- Use normalization to handle Pest v4 describe blocks and arrow patterns
     local name = normalize_test_name(test_attr.name)
 
+    -- Extract just the file path from test_attr.file (Pest includes "file::testname" format)
+    local file_path = string.gsub(test_attr.file, "(.*)" .. separator .. ".*", "%1")
+    -- If no :: was found, use the original file attribute
+    if file_path == test_attr.file then
+        file_path = test_attr.file
+    end
+
     -- Build test ID: file::normalized_name
-    local test_id = test_attr.file .. separator .. name
+    local test_id = file_path .. separator .. name
     logger.debug("Pest id:", { test_id })
     logger.debug("Original name:", { test_attr.name })
     logger.debug("Normalized name:", { name })
