@@ -443,6 +443,21 @@ describe("normalize_test_name", function()
             utils.normalize_test_name("`my.describe` -> it does something")
         )
     end)
+
+    it("extracts test name from describe → test pattern (no it prefix)", function()
+        -- Pest v4 describe blocks with test() produce: `describe` → test_name
+        assert.are.equal(
+            "guests cannot cancel invitations",
+            utils.normalize_test_name("`cancel` → guests cannot cancel invitations")
+        )
+    end)
+
+    it("extracts test name from describe -> test pattern with ASCII arrow", function()
+        assert.are.equal(
+            "leaders can cancel pending invitations",
+            utils.normalize_test_name("`cancel` -> leaders can cancel pending invitations")
+        )
+    end)
 end)
 
 describe("generate_id_variants", function()

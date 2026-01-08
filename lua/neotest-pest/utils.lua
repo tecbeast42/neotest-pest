@@ -21,8 +21,21 @@ local function normalize_test_name(name)
         describe_it_match = string.match(normalized, " %-> it (.+)$")
     end
 
+    -- Step 2b: Handle describe blocks with test() functions
+    -- "`describe` → test name" → "test name"
+    -- Pattern: `...` → <test_name> (backtick indicates describe block)
+    local describe_test_match = nil
+    if not describe_it_match then
+        describe_test_match = string.match(normalized, "^`.+` → (.+)$")
+        if not describe_test_match then
+            describe_test_match = string.match(normalized, "^`.+` %-> (.+)$")
+        end
+    end
+
     if describe_it_match then
         normalized = describe_it_match
+    elseif describe_test_match then
+        normalized = describe_test_match
     -- Step 3: Handle arch preset tests specially
     -- "preset → security" → "security"
     -- "preset → laravel → ignoring..." → "laravel"
